@@ -37,7 +37,7 @@ services:
       OPENBLAS_NUM_THREADS: 1
       OMP_NUM_THREADS: 1
     ports: ["${BACKEND_PORT:-19248}:8000"]
-    volumes: ["artifacts:/artifacts"]
+    volumes: ["artifacts:/artifacts", "./test-artifacts/gb-0044:/tests:ro"]
     depends_on:
       db: {condition: service_healthy}
       redis: {condition: service_healthy}

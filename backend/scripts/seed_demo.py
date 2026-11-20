@@ -6,7 +6,7 @@ from src.models.user import User
 from src.models.source import Source
 from src.models.record import Record
 from src.models.run import Run
-from src.models import note,audit
+from src.models import note,audit,review
 from src.utils.security import hash_password
 from src.utils.serialization import now
 from src.services.runs import queue
@@ -23,7 +23,12 @@ def seed_values(kind,index,batch,rng):
         choices=[['序章','材料','工艺','案例'],['序章','案例','附录'],['材料','工艺','案例','附录'],['序章','材料','案例'],['序章']]
         path=choices[rng.randrange(len(choices))];return {'session':f'SY-{batch+1}-{index+1:04}','path':'>'.join(path)}
     if kind=='forest':
-        moisture=rng.uniform(20,60);thickness=rng.uniform(1,8);temperature=rng.uniform(50,100);airflow=rng.uniform(1,5)
+        moisture=rng.uniform(20,60);thickness=rng.uniform(1,8)
+        if batch==3:
+            # 工况复核组：离散设定温度/风量，同温同风成组，供冲突复核演示
+            temperature=rng.choice([65.0,75.0,85.0]);airflow=rng.choice([2.5,3.0,3.5])
+        else:
+            temperature=rng.uniform(50,100);airflow=rng.uniform(1,5)
         minutes=12+1.6*moisture+8*thickness-.45*temperature-3*airflow+0.1*moisture*thickness+rng.gauss(0,3)
         return {'moisture':round(moisture,2),'thickness':round(thickness,2),'temperature':round(temperature,2),'airflow':round(airflow,2),'minutes':round(max(5,minutes),2)}
     if kind=='neighbors':
@@ -38,11 +43,11 @@ def seed():
         for role in ('admin','analyst','viewer'):
             email=role+'@'+CONFIG['slug']+'.demo'
             if not db.scalar(select(User).where(User.email==email)):db.add(User(email=email,password_hash=hash_password('Research2026!'),role=role))
-        for batch in range(3):
+        for batch in range(4):
             key=CONFIG['code']+f'-202611-{batch+1:02}'
             source=db.scalar(select(Source).where(Source.key==key))
             if not source:
-                source=Source(key=key,name=key+' '+['秋季常规组','复测对照组','工艺观察组'][batch],filename=CONFIG['slug']+f'-202611-{batch+1:02}.csv',description=CONFIG['scenario']);db.add(source);db.flush()
+                source=Source(key=key,name=key+' '+['秋季常规组','复测对照组','工艺观察组','工况复核组'][batch],filename=CONFIG['slug']+f'-202611-{batch+1:02}.csv',description=CONFIG['scenario']);db.add(source);db.flush()
             for index in range(CONFIG['seed_count']):
                 reference=key+f'-{index+1:04}'
                 vals=seed_values(CONFIG['algorithm'],index,batch,rng)
